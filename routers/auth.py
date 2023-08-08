@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime
 from typing import Optional
+import sys
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -11,6 +12,8 @@ from jose import jwt, JWTError
 
 import models
 
+
+sys.path.append("..")
 
 SECRET_KEY = "KlgH6AzYDeZeGwD288to7913vTHT8wp7"
 ALGORITHM = "HS256"
@@ -31,7 +34,11 @@ models.Base.metadata.create_all(bind=engine)
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
 
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+    responses={401: {"user": "Not authorized"}}
+)
 
 
 def get_db():
@@ -88,7 +95,7 @@ async def get_current_user(token: str = Depends(oauth2_bearer)):
         raise get_user_exception()
 
 
-@app.post("/create/user")
+@router.post("/create/user")
 async def create_new_user(new_user_model: CreateUser, db: Session = Depends(get_db)):
     create_user_model = models.Users()
     create_user_model.email = new_user_model.email
@@ -106,7 +113,8 @@ async def create_new_user(new_user_model: CreateUser, db: Session = Depends(get_
 
     return {"success"}
 
-@app.post("/token")
+
+@router.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
                                  db: Session = Depends(get_db)):
     user = authenticate_user(form_data.username, form_data.password, db)
